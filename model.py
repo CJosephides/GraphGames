@@ -36,18 +36,26 @@ class Token:
     """
 
     id = 0
-    scale = TOKEN_SIZE 
 
-    def __init__(self, x, y, c, shape=1):
+    def __init__(self, x, y, c, shape=1, flow=False):
         self.x = x
         self.y = y
         self.c = c
+        self.flow = flow
+
+        if self.flow:
+            self.scale = FLOW_SIZE
+        else:
+            self.scale = TOKEN_SIZE
+
         self.shape = shape
         self.update_vertices()
         self.selected = False
 
         self.id = Token.id
         Token.id += 1
+
+        self.parent = None
 
     def update_vertices(self):
         """
@@ -56,25 +64,25 @@ class Token:
         if self.shape == 0:
             # Triangle
             self.vertices = pyglet.graphics.vertex_list(
-                3, ('v2f', [self.x - 1*Token.scale, self.y - 1*Token.scale,
-                            self.x, self.y + 1*Token.scale,
-                            self.x + 1*Token.scale, self.y - 1*Token.scale]),
+                3, ('v2f', [self.x - 1*self.scale, self.y - 1*self.scale,
+                            self.x, self.y + 1*self.scale,
+                            self.x + 1*self.scale, self.y - 1*self.scale]),
                 ('c4B', self.c * 3))
 
         elif self.shape == 1:
             # Rhombus
             self.vertices = pyglet.graphics.vertex_list(
-                4, ('v2f', [self.x - 1*Token.scale, self.y,
-                            self.x, self.y + 1*Token.scale,
-                            self.x + 1*Token.scale, self.y,
-                            self.x, self.y - 1*Token.scale]),
+                4, ('v2f', [self.x - 1*self.scale, self.y,
+                            self.x, self.y + 1*self.scale,
+                            self.x + 1*self.scale, self.y,
+                            self.x, self.y - 1*self.scale]),
                 ('c4B', self.c * 4))
 
         elif self.shape == 2:
             # Circle
             self.vertices = pyglet.graphics.vertex_list(
                 100 + 2,
-                ('v2f', get_circle_vertices(self.x, self.y, TOKEN_SIZE, 100)),
+                ('v2f', get_circle_vertices(self.x, self.y, self.scale, 100)),
                 ('c4B', self.c + (self.c * 101)))
 
     def is_clicked(self, mx, my):
@@ -83,7 +91,7 @@ class Token:
         """
 
         # We will use a circular bounding box.
-        if (((my - self.y)**2) + ((mx - self.x)**2))**(0.5) <= Token.scale:
+        if (((my - self.y)**2) + ((mx - self.x)**2))**(0.5) <= self.scale:
             print("Token %d: clicked." % self.id)
             return True
         else:
@@ -151,6 +159,7 @@ class GraphNode:
         GraphNode.id += 1
 
         self.tokens = []
+        self.flow = None
 
     def update_vertices(self):
         """
@@ -174,21 +183,34 @@ class GraphNode:
     # # Tokens ---
 
     def add_token(self, token):
-        self.tokens.append(token)
+        token.parent = self
+        if not token.flow:
+            self.tokens.append(token)
+        else:
+            self.flow = token
         self.update_tokens()
 
     def update_tokens(self):
         c = 0
         for token in self.tokens:
             token.x = self.x + (0.75*self.r) * np.sin(c*2*np.pi /
-                                                     len(self.tokens))
+                                                          len(self.tokens))
             token.y = self.y + (0.75*self.r) * np.cos(c*2*np.pi /
-                                                     len(self.tokens))
+                                                          len(self.tokens))
             token.update_vertices()
             c += 1
 
+        if isinstance(self.flow, Token):
+            self.flow.x = self.x
+            self.flow.y = self.y
+            self.flow.update_vertices()
+
     def remove_token(self, token):
-        self.tokens.remove(token)
+        token.parent = None
+        if not token.flow:
+            self.tokens.remove(token)
+        else:
+            self.flow = None
         self.update_tokens()
 
     def draw(self):
@@ -199,9 +221,9 @@ class GraphNode:
         self.vertices_outline.draw(GL_TRIANGLE_FAN)
         # Fill
         self.vertices.draw(GL_TRIANGLE_FAN)
-        # Tokens
-        for token in self.tokens:
-            token.draw()
+        # # Tokens
+        # for token in self.tokens:
+        #     token.draw()
 
 
 class Graph:
@@ -281,3 +303,9 @@ class Graph:
         # Then draw vertices.
         for node in self.nodes.values():
             node.draw()
+        # Then draw tokens.
+        for node in self.nodes.values():
+            for token in node.tokens:
+                token.draw()
+            if isinstance(node.flow, Token):
+                node.flow.draw()
