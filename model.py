@@ -6,6 +6,7 @@ import numpy as np
 import pyglet
 from pyglet.gl import *
 from pyglet.window import mouse
+from config import *
 
 # ---------------------
 # Utility functions ---
@@ -35,7 +36,7 @@ class Token:
     """
 
     id = 0
-    scale = 25
+    scale = TOKEN_SIZE 
 
     def __init__(self, x, y, c, shape=1):
         self.x = x
@@ -69,6 +70,13 @@ class Token:
                             self.x, self.y - 1*Token.scale]),
                 ('c4B', self.c * 4))
 
+        elif self.shape == 2:
+            # Circle
+            self.vertices = pyglet.graphics.vertex_list(
+                100 + 2,
+                ('v2f', get_circle_vertices(self.x, self.y, TOKEN_SIZE, 100)),
+                ('c4B', self.c + (self.c * 101)))
+
     def is_clicked(self, mx, my):
         """
         is_clicked(mx, my): determine if the object has been clicked.
@@ -86,7 +94,9 @@ class Token:
             self.selected = True
             print('Token %d: selected = %s.' % (self.id, self.selected))
             # Slightly change color and update vertices.
-            self.c = (self.c[0] + 25, self.c[1] + 25, self.c[2] + 25,
+            self.c = (min(255, self.c[0] + 25),
+                      min(255, self.c[1] + 25),
+                      min(255, self.c[2] + 25),
                       self.c[3])
             self.update_vertices()
 
@@ -95,7 +105,9 @@ class Token:
             self.selected = False
             print('Token %d: selected = %s.' % (self.id, self.selected))
             # Slightly change color and update vertices.
-            self.c = (self.c[0] - 25, self.c[1] - 25, self.c[2] - 25,
+            self.c = (self.c[0] - 25,
+                      self.c[1] - 25,
+                      self.c[2] - 25,
                       self.c[3])
             self.update_vertices()
 
@@ -138,21 +150,37 @@ class GraphNode:
         self.id = GraphNode.id
         GraphNode.id += 1
 
+        self.tokens = []
+
     def update_vertices(self):
         """
         Update the vertices for this node.
         """
         self.vertices = pyglet.graphics.vertex_list(
             GraphNode.num_vertices + 2,
+            ('v2f', get_circle_vertices(self.x,
+                                        self.y,
+                                        self.r - NODE_THICKNESS,
+                                        GraphNode.num_vertices)),
+            ('c4B', (220, 220, 220, 255) * (GraphNode.num_vertices + 2)))
+
+        self.vertices_outline = pyglet.graphics.vertex_list(
+            GraphNode.num_vertices + 2,
             ('v2f', get_circle_vertices(self.x, self.y, self.r,
                                         GraphNode.num_vertices)),
-            ('c4B', self.c + (self.c * (GraphNode.num_vertices + 1))))
+            ('c4B', self.c * (GraphNode.num_vertices + 2)))
 
     def draw(self):
         """
         OpenGL draws self.
         """
+        # Stroke
+        self.vertices_outline.draw(GL_TRIANGLE_FAN)
+        # Fill
         self.vertices.draw(GL_TRIANGLE_FAN)
+
+    def add_token(self, token):
+        self.tokens.append(token)
 
 
 class Graph:
@@ -177,10 +205,15 @@ class Graph:
         ws = self.window.get_size()
         self.node_positions = []
         # TODO: Need bounding box.
-        BORDER = 100
         for center in self.node_centers:
-            x = ws[0]*(0.5*(center[0] + 1))
-            y = ws[1]*(0.5*(center[1] + 1))
+            # WARNING: Some networkx implementations fail to respect the
+            # graph_layout scaling requirement. The code below works only for
+            # those cases where the scaling is correct!
+
+            # x = ws[0]*(0.5*(center[0] + 1))
+            # y = ws[1]*(0.5*(center[1] + 1))
+            x = ws[0]*center[0]
+            y = ws[1]*center[1]
 
             x = BORDER + (x/ws[0]) * (ws[0] - 2*BORDER)
             y = BORDER + (y/ws[1]) * (ws[1] - 2*BORDER)
@@ -189,12 +222,11 @@ class Graph:
 
     def make_nodes(self):
         self.nodes = dict()
-        # TODO: Correct node naming!
         for n in range(len(self.node_ids)):
             self.nodes[self.node_ids[n]] = \
                 GraphNode(self.node_positions[n][0],
                           self.node_positions[n][1],
-                          25,
+                          NODE_RADIUS,
                           self.node_colors[n]
                           )
 
@@ -203,7 +235,6 @@ class Graph:
         Makes list of vertices for the edges.
         """
         edge_vertices = []
-        # TODO: Correct node naming!
         for i in range(len(self.edges)):
             start_node = self.nodes[self.edges[i][0]]
             end_node = self.nodes[self.edges[i][1]]
@@ -224,6 +255,7 @@ class Graph:
 
     def draw(self):
         # Draw edges first.
+        glLineWidth(1)
         self.edge_vertices.draw(GL_LINE_STRIP)
         # Then draw vertices.
         for node in self.nodes.values():

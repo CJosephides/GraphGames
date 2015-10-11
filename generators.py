@@ -1,11 +1,12 @@
 import networkx as nx
 import numpy as np
+from config import *
 
 # --------------------
 # Graph generators ---
 
 
-def random_symmetric_graph(num_nodes, num_joints, num_colors, rewiring_p=0.4):
+def random_symmetric_graph(num_nodes, num_joints, num_colors, rewiring_p=0.5):
     """
     random_symmetric_graph(num_nodes, num_joints, num_colors, rewiring_p=0.4):
     makes a symmetric (newman-watts-strogatz) graph.
@@ -29,12 +30,24 @@ def random_symmetric_graph(num_nodes, num_joints, num_colors, rewiring_p=0.4):
         mapping[i] = (num_nodes + 1) + i
     nx.relabel_nodes(g2, mapping, copy=False)
 
+    # TODO: Need a symmetric layout algorithm.
+    """
+    Getting the layout of the one-sided graph (g) before composition, and
+    reflecting the positions of the other side manually around the LSQ line of
+    the joints nodes should work.
+    """
+
+    # Get spring-directed layout of one-sided graph.
+    g_layout = nx.spring_layout(g, scale=1.0)
+
     # Get the composition of the two graphs
     g = nx.compose(g, g2)
 
     # Force-directed graph layout
-    g_layout = nx.spring_layout(g, k=5/np.sqrt(g.number_of_nodes()),
-                                iterations=10000,
+    g_layout = nx.spring_layout(g,
+                                k=1/np.sqrt(g.number_of_nodes()),
+                                iterations=1000,
+                                fixed=None,
                                 scale=1.0)
 
     node_centers = []
@@ -54,10 +67,10 @@ def random_symmetric_graph(num_nodes, num_joints, num_colors, rewiring_p=0.4):
     # Replace string with rgba value.
     for i in range(len(color_choices)):
         if color_choices[i] == 'red':
-            node_colors.append((200, 50, 50, 255))
+            node_colors.append(COLOR_RED)
         elif color_choices[i] == 'blue':
-            node_colors.append((50, 50, 200, 255))
+            node_colors.append(COLOR_BLUE)
         elif color_choices[i] == 'gray':
-            node_colors.append((50, 50, 50, 255))
+            node_colors.append(COLOR_GRAY)
 
     return g.nodes(), node_centers, node_colors, g.edges()

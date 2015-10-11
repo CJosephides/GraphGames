@@ -4,17 +4,18 @@ from pyglet.gl import *
 from pyglet.window import mouse
 from model import *
 from generators import random_symmetric_graph
+from config import *
 
 
 # ---------
 # Setup ---
 
-window = pyglet.window.Window(800, 600)
+window = pyglet.window.Window(WINDOW_X, WINDOW_Y)
 
 glEnable(GL_BLEND)
 glEnable(GL_LINE_SMOOTH)
 glEnable(GL_POINT_SMOOTH)
-glLineWidth(3)
+glLineWidth(2)
 glClearColor(200, 200, 200, 255)
 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
@@ -22,14 +23,14 @@ glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 # -----------
 # Objects ---
 
-GRAPH = Graph(*random_symmetric_graph(8, 2, 2), window=window)
+GRAPH = Graph(*random_symmetric_graph(10, 2, 3, rewiring_p=0.5), window=window)
 
 NODES = []
-#NODES.append(GraphNode(200, 200, 50, (200, 50, 50, 255)))
+# NODES.append(GraphNode(200, 200, 50, (200, 50, 50, 255)))
 
 TOKENS = []
-#TOKENS.append(Token(200, 200, (50, 50, 200, 255), shape=1))
-#TOKENS.append(Token(100, 100, (50, 50, 200, 255), shape=1))
+TOKENS.append(Token(200, 200, COLOR_RED, shape=2))
+TOKENS.append(Token(100, 100, (200, 100, 100, 255), shape=1))
 
 ACTIVE_TOKEN = None
 
@@ -41,11 +42,10 @@ ACTIVE_TOKEN = None
 def on_draw():
     window.clear()
 
+    # Draw the graph (edges, nodes)
     GRAPH.draw()
 
-    for node in NODES:
-        node.draw()
-
+    # Overlay tokens.
     for token in TOKENS:
         token.draw()
 
