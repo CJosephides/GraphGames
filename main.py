@@ -29,10 +29,27 @@ NODES = []
 # NODES.append(GraphNode(200, 200, 50, (200, 50, 50, 255)))
 
 TOKENS = []
-TOKENS.append(Token(200, 200, COLOR_RED, shape=2))
-TOKENS.append(Token(100, 100, (200, 100, 100, 255), shape=1))
+# TOKENS.append(Token(200, 200, COLOR_RED, shape=2))
+# TOKENS.append(Token(100, 100, (200, 100, 100, 255), shape=1))
+
+# Add some tokens to the nodes.
+GRAPH.nodes[0].add_token(Token(200, 200, COLOR_RED, shape=2))
+GRAPH.nodes[0].add_token(Token(200, 200, COLOR_RED, shape=2))
+GRAPH.nodes[0].add_token(Token(200, 200, COLOR_BLUE, shape=2))
+GRAPH.nodes[0].add_token(Token(200, 200, COLOR_BLUE, shape=2))
 
 ACTIVE_TOKEN = None
+
+# --------------
+# Controller ---
+
+def get_clicked_token(mx, my, button, modifiers):
+    for node in GRAPH.nodes.values():
+        for token in node.tokens:
+            if token.is_clicked(mx, my):
+                return token
+    else:
+        return None
 
 # ------------------------------
 # Window events (controller) ---
@@ -55,18 +72,19 @@ def on_mouse_press(mx, my, button, modifiers):
     # Clicking selects/deselects tokens.
     global ACTIVE_TOKEN
     print("\nController: mouse pressed. ACTIVE_TOKEN = %s" % ACTIVE_TOKEN)
-    for token in TOKENS:
-        if token.is_clicked(mx, my):
-            print("Controller: token %d clicked." % token.id)
-            # Deselect previous active token, if any.
-            if isinstance(ACTIVE_TOKEN, Token):
-                print("Controller: deselecting token %d." % ACTIVE_TOKEN.id)
-                ACTIVE_TOKEN.deselect()
-            # Set clicked token as active, and select.
-            ACTIVE_TOKEN = token
-            print("Controller: selecting token %d." % ACTIVE_TOKEN.id)
-            token.select()
-            break
+    for node in GRAPH.nodes.values():
+        for token in node.tokens:
+            if token.is_clicked(mx, my):
+                print("Controller: token %d clicked." % token.id)
+                # Deselect previous active token, if any.
+                if isinstance(ACTIVE_TOKEN, Token):
+                    print("Controller: deselecting token %d." % ACTIVE_TOKEN.id)
+                    ACTIVE_TOKEN.deselect()
+                # Set clicked token as active, and select.
+                ACTIVE_TOKEN = token
+                print("Controller: selecting token %d." % ACTIVE_TOKEN.id)
+                token.select()
+                break
     else:
         print('Controller: click received, nothing clicked.')
         # If no token has been clicked, deselect the current one (if any).

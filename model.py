@@ -170,6 +170,27 @@ class GraphNode:
                                         GraphNode.num_vertices)),
             ('c4B', self.c * (GraphNode.num_vertices + 2)))
 
+    # # ----------
+    # # Tokens ---
+
+    def add_token(self, token):
+        self.tokens.append(token)
+        self.update_tokens()
+
+    def update_tokens(self):
+        c = 0
+        for token in self.tokens:
+            token.x = self.x + (0.75*self.r) * np.sin(c*2*np.pi /
+                                                     len(self.tokens))
+            token.y = self.y + (0.75*self.r) * np.cos(c*2*np.pi /
+                                                     len(self.tokens))
+            token.update_vertices()
+            c += 1
+
+    def remove_token(self, token):
+        self.tokens.remove(token)
+        self.update_tokens()
+
     def draw(self):
         """
         OpenGL draws self.
@@ -178,9 +199,9 @@ class GraphNode:
         self.vertices_outline.draw(GL_TRIANGLE_FAN)
         # Fill
         self.vertices.draw(GL_TRIANGLE_FAN)
-
-    def add_token(self, token):
-        self.tokens.append(token)
+        # Tokens
+        for token in self.tokens:
+            token.draw()
 
 
 class Graph:
